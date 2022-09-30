@@ -251,8 +251,8 @@ builder.queryType({
     posts: t.prismaField({
       type: [PostType], // An array of posts
       resolve: async (query) =>
-        // Return all posts, oldest first
-        prisma.post.findMany({ ...query, orderBy: { id: "desc" } }),
+        // Return the 10 most recent posts
+        prisma.post.findMany({ ...query, orderBy: { id: "desc" }, take: 10 }),
     }),
   }),
 });
@@ -325,7 +325,7 @@ const yoga = createYoga({
 
 // Start an HTTP server on port 4000
 createServer(yoga).listen(4000, () => {
-  console.info("Server is running on http://localhost:4000/graphql");
+  console.log("Server is running on http://localhost:4000/graphql");
 });
 
 // Save the schema to `build/schema.graphql`
@@ -345,11 +345,100 @@ console.log("✨ Schema exported");
 
 ### Update the build script in `package.json`
 
-```json
+```jsonc
 {
   "scripts": {
-    // Update this line to build the API
-    "build": "prisma generate && tsc && yarn node ./build/post-build.js"
+    // Update this the build script with what follows:
+    "build": "prisma generate && tsc && yarn node ./build/post-build.js",
+    "dev": "tsx watch --clear-screen=false src/index.ts"
   }
 }
 ```
+
+And we're all settled! You can run `yarn dev` if it's not already running an go to [localhost:4000/graphql](http://localhost:4000/graphql) to play with the GraphQL API. _Behold the magnificent GraphiQL interface!_ It looks really nice, doesn't it?
+
+You can try fetching and inserting data with the following queries:
+
+```graphql
+query {
+  posts {
+    id
+    title
+    body
+  }
+}
+```
+
+```graphql
+mutation {
+  createPost(title: "Is this thing on?", body: "Sure it is!") {
+    id
+  }
+}
+```
+
+Things are looking good... Let's make them look even better!
+
+## Svelte
+
+I won't go into the details on _why_ [Svelte](https://svelte.dev/), but I like it a lot. It _feels_ great writing Svelte code. And did I mention that it also offers type safety?
+
+The easiest way to setup a new Svelte website is with [SvelteKit](https://kit.svelte.dev/); let's go back to the `packages` directory and create a new SvelteKit project:
+
+```bash
+# Create a Svelte app in the `packages/app` directory
+# You'll have a few choices prompted:
+#  - Template: Skeleton project
+#  - Type checking: TypeScript
+#  - Prettier, ESLint, etc.: Not needed, do as you wish
+yarn create svelte@latest app
+
+# Install the dependencies
+cd $_ && yarn install
+```
+
+This creates a bunch of new files in the `packages/app` directory. Let's take a look at the most important ones.
+
+- `src`
+  - `routes`
+    - `+page.svelte`: this is the index page of the website and also a Svelte component
+- `package.json`: the package manifest, with the dependencies and scripts
+- `svelte.config.js`: this is the Svelte configuration file
+
+The `package.json` comes with a few scripts out of the box:
+
+- `dev`: starts the development server
+- `build`: builds the application for production
+- `check`: checks the code for type errors (yay!)
+
+You can run `svelte dev` to see the _hello world_, but we need a missing piece before we can do anything useful: the GraphQL client.
+
+## GraphQL Zeus
+
+You can think of [GraphQL Zeus](https://zeus.graphqleditor.com/) as Prisma for the frontend: it writes GraphQL queries out of JavaScript objects, and produces the proper return types.
+
+In the `packages/app` directory, add the following dependencies:
+
+```bash
+# Install GraphQL Zeus
+yarn add --dev graphql-zeus
+
+# Mark the API as a dev dependency
+yarn add --dev api@workspace
+
+# Gitignore the generated files
+echo "src/zeus/" >> .gitignore
+```
+
+Let's update `packages/app/package.json`:
+
+```jsonc
+{
+  "script": {
+    // Build the GraphQL client right before the rest of application
+    "build": "zeus ../api/build/schema.graphql ./src --es && yarn check --threshold warning && vite build"
+  }
+}
+```
+
+Run `yarn build` and you should see a new `src/zeus/` directory with a bunch of files. Let's put all the pieces together!
