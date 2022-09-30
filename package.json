@@ -1,0 +1,8 @@
+{
+  "name": "typed-board",
+  "packageManager": "yarn@4.0.0-rc.22",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}
