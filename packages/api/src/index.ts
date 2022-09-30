@@ -1,14 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { createYoga } from "graphql-yoga";
+import { createServer } from "node:http";
+import { schema, writeSchema } from "./schema.js";
 
-const prisma = new PrismaClient();
+// Create a Yoga instance with a GraphQL schema.
+const yoga = createYoga({ schema });
 
-// Insert a new post
-await prisma.post.create({
-  data: {
-    title: "Hello World",
-    body: "This is the first post",
-  },
+// Pass it into a server to hook into request handlers.
+const server = createServer(yoga);
+
+// Start the server and you're done!
+server.listen(4000, () => {
+  console.info("Server is running on http://localhost:4000/graphql");
 });
 
-// Print all posts
-console.log(await prisma.post.findMany());
+await writeSchema();

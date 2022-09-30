@@ -16,3 +16,7 @@ model Post {
   title String
   body  String
 }
+
+generator pothos {
+  provider = "prisma-pothos-types"
+}

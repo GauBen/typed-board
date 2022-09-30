@@ -191,3 +191,42 @@ You should see your first post printed in the console. **Hello World!**
 Thanks to Prisma, all the arguments and return values are typed, allowing **TypeScript to catch typos and provide relevant autocompletion.**
 
 We're done for the database part. Let's move on to the backend.
+
+## Pothos
+
+[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It's a framework that lets you write code-first GraphQL APIs with an emphasize on _pluginability_ and type safety. **And it has an awesome Prisma integration!** (I'm genuinely excited about this one, it makes my life so much easier.)
+
+We'll add a GraphQL API on top of our database, with a query to get articles and a mutation to create a new one.
+
+Let's install Pothos and [Yoga](https://www.the-guild.dev/graphql/yoga-server) in the `packages/api` directory:
+
+```bash
+# Install Pothos and Yoga
+yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga@three
+
+# Setup the Prisma-Pothos integration
+echo 'generator pothos {\nprovider = "prisma-pothos-types"\n}' >> prisma/schema.prisma
+yarn prisma generate
+```
+
+Let's create a few files for the API to work:
+
+### `src/schema.ts`
+
+This file will contain our queries and mutations. It's a good a good practice to separate the schema file in several files to allow it scale, the [Pothos documentation has dedicated section](https://pothos-graphql.dev/docs/guide/app-layout) about it, but we'll keep it simple for now.
+
+```ts
+
+```
+
+### `src/build.ts`
+
+```ts
+
+```
+
+### `src/index.ts`
+
+```ts
+
+```
