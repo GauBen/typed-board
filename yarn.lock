@@ -118,6 +118,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^18.7.23":
+  version: 18.7.23
+  resolution: "@types/node@npm:18.7.23"
+  checksum: 83f50561f3858e514d864cea3fbfc3142ec58a6acaf9c405609776b97b67a4692309feb1b9f928cca8ebdc964554a2e02480feb98f1774881ce440a9df722924
+  languageName: node
+  linkType: hard
+
 "abbrev@npm:1":
   version: 1.1.1
   resolution: "abbrev@npm:1.1.1"
@@ -168,6 +175,7 @@ __metadata:
   dependencies:
     "@prisma/client": "npm:^4.4.0"
     "@tsconfig/node18-strictest-esm": "npm:^1.0.1"
+    "@types/node": "npm:^18.7.23"
     prisma: "npm:^4.4.0"
     tsx: "npm:^3.9.0"
     typescript: "npm:^4.8.4"

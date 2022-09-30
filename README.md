@@ -52,7 +52,7 @@ yarn init --private --workspace --install=4.0.0-rc.22
 
 # Enable the good ol' node_modules
 echo "nodeLinker: node-modules" >> .yarnrc.yml
-echo "node_modules/" >> .gitignore
+echo "node_modules/\nbuild/" >> .gitignore
 ```
 
 We'll use Yarn 4 because it ships with a few tools to manage monorepos that we'll use later.
@@ -69,12 +69,13 @@ mkdir -p packages/api && cd $_
 yarn init --private
 
 # Install a few dependencies to get going
-yarn add --dev typescript tsx @tsconfig/node18-strictest-esm prisma
+yarn add --dev typescript @types/node tsx @tsconfig/node18-strictest-esm prisma
+yarn add @prisma/client
 ```
 
 The last command installs the following tools:
 
-- [TypeScript](https://www.typescriptlang.org/), to check that our code is type-safe;
+- [TypeScript](https://www.typescriptlang.org/), to check that our code is type-safe, and [type definitions for Node.js](https://www.npmjs.com/package/@types/node);
 - [TSX](https://github.com/esbuild-kit/tsx), to run TypeScript without compiling the code;
 - A [`tsconfig.json` preset](https://github.com/tsconfig/bases/blob/main/bases/node18-strictest-esm.combined.json) that ensures type safety;
 - [Prisma](https://www.prisma.io/), to interact with the database.
@@ -87,9 +88,6 @@ yarn prisma init --datasource-provider sqlite
 This command creates a few files, but the most interesting one is `prisma/schema.prisma`. Prisma offers to describe a database through a schema file. We'll use this file to have Prisma create the tables for us.
 
 ```prisma
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -112,9 +110,6 @@ This `model` declares that we want a `Post` table with 3 columns. Our database d
 ```bash
 # Ask prisma to "push" our changes to the database
 yarn prisma db push
-
-# Install the dependencies added by Prisma
-yarn install
 
 # Ignore the SQLite database
 echo "dev.db" >> .gitignore

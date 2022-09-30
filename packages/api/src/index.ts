@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Insert a new post
 await prisma.post.create({
   data: {
     title: "Hello World",
@@ -9,4 +10,5 @@ await prisma.post.create({
   },
 });
 
+// Print all posts
 console.log(await prisma.post.findMany());
