@@ -1,10 +1,10 @@
 # Achieving end-to-end type safety in a modern JS GraphQL stack
 
-In this article, we'll create a simple GraphQL application, a message board, by combining a lot of recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup.
+In this article, we'll create a simple GraphQL application, a message board, by combining a lot of recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup. **It is however a long read, so I recommend settling in with a cup of coffee, a comfortable chair and a terminal.**
 
 ## What is _end-to-end_ type safety?
 
-Type safety is a property of a program that guarantees that all values types are known at compile time. It prevents a lot of bugs before running the program. The most common way to achieve type safety in JavaScript is to use TypeScript.
+Type safety is a property of a program that guarantees that all values types are known at build time. It prevents a lot of bugs before running the program. The most common way to achieve type safety in JavaScript is to use TypeScript.
 
 ```ts
 // Declare an object shape:
@@ -348,14 +348,14 @@ console.log("✨ Schema exported");
 ```jsonc
 {
   "scripts": {
-    // Update this the build script with what follows:
+    // Update the build script with what follows:
     "build": "prisma generate && tsc && yarn node ./build/post-build.js",
     "dev": "tsx watch --clear-screen=false src/index.ts"
   }
 }
 ```
 
-And we're all settled! You can run `yarn dev` if it's not already running an go to [localhost:4000/graphql](http://localhost:4000/graphql) to play with the GraphQL API. _Behold the magnificent GraphiQL interface!_ It looks really nice, doesn't it?
+And we're all settled! You can run `yarn dev` if it's not already running an go to [localhost:4000/graphql](http://localhost:4000/graphql) to play with the GraphQL API. _Behold the magnificent GraphiQL interface!_ It looks really nice compared to its previous version, doesn't it?
 
 You can try fetching and inserting data with the following queries:
 
@@ -377,11 +377,11 @@ mutation {
 }
 ```
 
-Things are looking good... Let's make them look even better!
+Things are working well... Let's make them look good!
 
 ## Svelte
 
-I won't go into the details on _why_ [Svelte](https://svelte.dev/), but I like it a lot. It _feels_ great writing Svelte code. And did I mention that it also offers type safety?
+I won't go into the details on _why_ [Svelte](https://svelte.dev/), but I like Svelte a lot. It _feels_ great writing Svelte code. And did I mention that it also offers type safety?
 
 The easiest way to setup a new Svelte website is with [SvelteKit](https://kit.svelte.dev/); let's go back to the `packages` directory and create a new SvelteKit project:
 
@@ -437,8 +437,206 @@ Let's update `packages/app/package.json`:
   "script": {
     // Build the GraphQL client right before the rest of application
     "build": "zeus ../api/build/schema.graphql ./src --es && yarn check --threshold warning && vite build"
+    // There's also `yarn check` in there to catch type errors
   }
 }
 ```
 
 Run `yarn build` and you should see a new `src/zeus/` directory with a bunch of files. Let's put all the pieces together!
+
+## Typed Board
+
+How do we create a message board out of all of this? Keep reading, we're almost there!
+
+### `src/lib/zeus.ts`
+
+Zeus is a powerful tool but it was not made to be used for server-side rendering. We'll solve this by creating a small wrapper around the generated client:
+
+```ts
+import type { LoadEvent } from "@sveltejs/kit";
+import { Thunder, type ValueTypes } from "../zeus/index";
+
+/** A function that allows using Zeus with a custom `fetch` function. */
+const thunder = (fetch: LoadEvent["fetch"]) =>
+  Thunder((query, variables) =>
+    fetch("http://localhost:4000/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables }),
+    })
+      // Errors are not properly handled by this code, but you get the idea
+      .then((response) => response.json())
+      .then(({ data }) => data)
+  );
+
+/** A nice wrapper around the unfriendly `thunder` above. */
+export const query = async <Query extends ValueTypes["Query"]>(
+  query: Query,
+  { fetch }: { fetch: LoadEvent["fetch"] }
+) => thunder(fetch)("query")(query); // That's a lot of parentheses
+
+/** Same, but for mutations. */
+export const mutate = async <Mutation extends ValueTypes["Mutation"]>(
+  mutation: Mutation
+  // No need for a custom fetch function here, since mutations are
+  // never sent during server-side rendering
+) => thunder(fetch)("mutation")(mutation);
+```
+
+It'll make our GraphQL queries much nicer to write.
+
+### `src/routes/+page.ts`
+
+This file is used to provide the data to the `+page.svelte` component, both on the client (when using browser navigation) and the server (when using server-side rendering).
+
+```ts
+import { query } from "$lib/zeus";
+import type { PageLoad } from "./$types";
+
+/** This gets called on both the server and the client to provide page data. */
+export const load: PageLoad = async ({ fetch }) =>
+  // Perform a GraphQL query
+  query(
+    {
+      // Query the `posts` field with all three columns
+      posts: {
+        // It looks a bit like Prisma, doesn't it?
+        id: true,
+        title: true,
+        body: true,
+      },
+    },
+    // Giving fetch allows server-side rendering
+    { fetch }
+  );
+```
+
+### `src/routes/+page.svelte`
+
+```svelte
+<script lang="ts">
+  import { invalidateAll } from "$app/navigation";
+  import { mutate } from "$lib/zeus";
+  import type { PageData } from "./$types";
+
+  // `export` means that `data` is a prop
+  export let data: PageData; // PageData is provided by SvelteKit
+
+  // Variables bound to the form inputs
+  let title = "";
+  let body = "";
+
+  /** Sends the `createPost` mutation and refreshes the page. */
+  const createPost = async () => {
+    await mutate({ createPost: [{ body, title }, { id: true }] });
+    await invalidateAll();
+    title = body = "";
+  };
+</script>
+
+<main>
+  <h1>Typed Board</h1>
+  <form on:submit|preventDefault={createPost}>
+    <h2>New post</h2>
+    <p>
+      <label>Title: <input type="text" bind:value={title} required /></label>
+    </p>
+    <p>
+      <label>Body: <textarea bind:value={body} rows="5" required /></label>
+    </p>
+    <p style:text-align="center">
+      <button type="submit">Post!</button>
+    </p>
+  </form>
+  <!-- `data.posts` is fully typed! -->
+  {#each data.posts as post}
+    <article>
+      <!--
+        Our tools tell us that `post` is of type
+        `{
+          id: string;
+          title: string;
+          body: string;
+        }`
+        If you remove `title: true` from `+page.ts`, you'll see an error below
+      -->
+      <h2>{post.title}</h2>
+      <pre>{post.body}</pre>
+    </article>
+  {/each}
+</main>
+
+<style>
+  /* Let's add a bit of CSS magic... */
+  :global(body) {
+    font-family: system-ui, sans-serif;
+    background-color: #fff6ec;
+  }
+
+  main {
+    max-width: 60rem;
+    margin: 2rem auto;
+  }
+
+  article,
+  form {
+    background-color: #fff;
+    overflow: hidden;
+    margin-block: 1rem;
+    padding-inline: 1rem;
+    box-shadow: 0 0 0.5rem #3001;
+    border-radius: 0.25rem;
+  }
+
+  label {
+    display: flex;
+    gap: 0.25rem 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  input {
+    flex: 1;
+  }
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+  }
+
+  button {
+    padding: 0.25em 0.5em;
+  }
+</style>
+```
+
+And that's it! When now have a working message board with _end-to-end_ type safety. If you make a type error in this project, it'll be detected at build time. Huh, I missing the most important part...
+
+## Wrapping up
+
+It's time to setup the whole _check my types_ build scripts. Thanks to Yarn 4, that's a matter of only one command. Add the following script in the root `package.json`:
+
+```jsonc
+{
+  "name": "typed-board",
+  "packageManager": "yarn@4.0.0-rc.22",
+  "private": true,
+  "workspaces": ["packages/*"],
+  // Add this script to build the two packages in the right order:
+  "scripts": {
+    "build": "yarn workspaces foreach --topological-dev -pv run build",
+    "dev": "yarn workspaces foreach -piv run dev"
+  }
+}
+```
+
+This build command triggers all the packages' `build` commands in the right (topological) order, and all of them are set up to catch type errors. I also added a `dev` command that starts all the dev servers in parallel, for convenience.
+
+```bash
+# Launch the whole build pipeline and check the code 🪄
+yarn build
+
+# Launch all the dev servers at once
+yarn dev
+```
+
+And this concludes this unusually long article. I hope you enjoyed it, and that you'll find it useful. If you have any questions, feel free to ask them in the comments below or where you found this article.

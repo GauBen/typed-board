@@ -18,7 +18,7 @@
   "packageManager": "yarn@4.0.0-rc.22",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc && yarn node ./build/post-build.js",
     "dev": "tsx watch --clear-screen=false src/index.ts"
   },
   "type": "module"

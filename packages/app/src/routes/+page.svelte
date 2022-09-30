@@ -3,10 +3,14 @@
   import { mutate } from "$lib/zeus";
   import type { PageData } from "./$types";
 
-  export let data: PageData;
+  // `export` means that `data` is a prop
+  export let data: PageData; // PageData is provided by SvelteKit
+
+  // Variables bound to the form inputs
   let title = "";
   let body = "";
 
+  /** Sends the `createPost` mutation and refreshes the page. */
   const createPost = async () => {
     await mutate({ createPost: [{ body, title }, { id: true }] });
     await invalidateAll();
@@ -28,8 +32,18 @@
       <button type="submit">Post!</button>
     </p>
   </form>
+  <!-- `data.posts` is fully typed! -->
   {#each data.posts as post}
     <article>
+      <!--
+        Our tools tell us that `post` is of type
+        `{
+          id: string;
+          title: string;
+          body: string;
+        }`
+        If you remove `title: true` from `+page.ts`, you'll see an error below
+      -->
       <h2>{post.title}</h2>
       <pre>{post.body}</pre>
     </article>
@@ -37,9 +51,10 @@
 </main>
 
 <style>
+  /* Let's add a bit of CSS magic... */
   :global(body) {
     font-family: system-ui, sans-serif;
-    background-color: #fff9f3;
+    background-color: #fff6ec;
   }
 
   main {
