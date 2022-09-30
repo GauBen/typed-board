@@ -3,7 +3,7 @@ import PrismaPlugin from "@pothos/plugin-prisma";
 import type PrismaTypes from "@pothos/plugin-prisma/generated";
 import { PrismaClient } from "@prisma/client";
 import { printSchema } from "graphql";
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 
 // Instantiate the Prisma client
 const prisma = new PrismaClient();
@@ -29,7 +29,8 @@ builder.queryType({
     // Declare a new query field, `posts`, which returns a list of `Post`s
     posts: t.prismaField({
       type: [PostType], // An array of posts
-      resolve: (query) =>
+      resolve: async (query) =>
+        // Return all posts, oldest first
         prisma.post.findMany({ ...query, orderBy: { id: "desc" } }),
     }),
   }),
@@ -40,22 +41,24 @@ builder.mutationType({
     // Declare a new mutation field, `createPost`, which creates a new `Post`
     createPost: t.prismaField({
       type: PostType,
+      // The mutation takes a `title` and `body` arguments
       args: {
         title: t.arg.string({ required: true }),
         body: t.arg.string({ required: true }),
       },
-      resolve: (query, _, { title, body }) =>
+      resolve: async (query, _, { title, body }) =>
+        // Create a post and return it
         prisma.post.create({ ...query, data: { title, body } }),
     }),
   }),
 });
 
+/** Application schema. */
 export const schema = builder.toSchema();
 
-export const writeSchema = async () => {
-  await mkdir(new URL(`file:///${process.cwd()}/build/`), { recursive: true });
-  return writeFile(
+/** Saves the schema to `build/schema.graphql`. */
+export const writeSchema = async () =>
+  writeFile(
     new URL("build/schema.graphql", `file:///${process.cwd()}/`),
     printSchema(schema)
   );
-};

@@ -182,6 +182,9 @@ The following lines tell Node.js that we write [ECMAScript modules](https://node
 ### 3. Fasten your seatbelt, we're ready for takeoff
 
 ```bash
+# Type-check and build the project
+yarn build
+
 # Run the code in watch mode (every time you save a file, it will be re-run)
 yarn dev
 ```
@@ -201,32 +204,152 @@ We'll add a GraphQL API on top of our database, with a query to get articles and
 Let's install Pothos and [Yoga](https://www.the-guild.dev/graphql/yoga-server) in the `packages/api` directory:
 
 ```bash
-# Install Pothos and Yoga
-yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga@three
+# Install Pothos, Yoga and GraphQL Armor
+yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga@three @escape.tech/graphql-armor
 
 # Setup the Prisma-Pothos integration
 echo 'generator pothos {\nprovider = "prisma-pothos-types"\n}' >> prisma/schema.prisma
 yarn prisma generate
 ```
 
-Let's create a few files for the API to work:
+Let's create a few files to define a simple GraphQL API:
 
 ### `src/schema.ts`
 
 This file will contain our queries and mutations. It's a good a good practice to separate the schema file in several files to allow it scale, the [Pothos documentation has dedicated section](https://pothos-graphql.dev/docs/guide/app-layout) about it, but we'll keep it simple for now.
 
 ```ts
+import SchemaBuilder from "@pothos/core";
+import PrismaPlugin from "@pothos/plugin-prisma";
+import type PrismaTypes from "@pothos/plugin-prisma/generated";
+import { PrismaClient } from "@prisma/client";
+import { printSchema } from "graphql";
+import { writeFile } from "node:fs/promises";
 
+// Instantiate the Prisma client
+const prisma = new PrismaClient();
+
+// Instantiate the schema builder with the Prisma plugin
+const builder = new SchemaBuilder<{ PrismaTypes: PrismaTypes }>({
+  plugins: [PrismaPlugin],
+  prisma: { client: prisma },
+});
+
+// Declare a `Post` GraphQL type, based on the table of the same name
+const PostType = builder.prismaObject("Post", {
+  fields: (t) => ({
+    // Expose only the underlying data we want to expose
+    id: t.exposeID("id"),
+    title: t.exposeString("title"),
+    body: t.exposeString("body"),
+  }),
+});
+
+builder.queryType({
+  fields: (t) => ({
+    // Declare a new query field, `posts`, which returns a list of `Post`s
+    posts: t.prismaField({
+      type: [PostType], // An array of posts
+      resolve: async (query) =>
+        // Return all posts, oldest first
+        prisma.post.findMany({ ...query, orderBy: { id: "desc" } }),
+    }),
+  }),
+});
+
+builder.mutationType({
+  fields: (t) => ({
+    // Declare a new mutation field, `createPost`, which creates a new `Post`
+    createPost: t.prismaField({
+      type: PostType,
+      // The mutation takes a `title` and `body` arguments
+      args: {
+        title: t.arg.string({ required: true }),
+        body: t.arg.string({ required: true }),
+      },
+      resolve: async (query, _, { title, body }) =>
+        // Create a post and return it
+        prisma.post.create({ ...query, data: { title, body } }),
+    }),
+  }),
+});
+
+/** Application schema. */
+export const schema = builder.toSchema();
+
+/** Saves the schema to `build/schema.graphql`. */
+export const writeSchema = async () =>
+  writeFile(
+    new URL("build/schema.graphql", `file:///${process.cwd()}/`),
+    printSchema(schema)
+  );
 ```
 
-### `src/build.ts`
+This is enough to declare a type, a query and a mutation. You can read the resulting schema in `build/schema.graphql`. It should look like this:
 
-```ts
+```graphql
+# No need to copy this, it is automatically generated!
+type Post {
+  id: ID!
+  body: String!
+  title: String!
+}
 
+type Query {
+  posts: [Post!]!
+}
+
+type Mutation {
+  createPost(body: String!, title: String!): Post!
+}
 ```
 
 ### `src/index.ts`
 
-```ts
+This file will be the entry point of our application. It creates the GraphQL server and starts it.
 
+```ts
+import { EnvelopArmorPlugin } from "@escape.tech/graphql-armor";
+import { createYoga } from "graphql-yoga";
+import { createServer } from "node:http";
+import { schema, writeSchema } from "./schema.js";
+
+// Create a Yoga instance with the schema
+const yoga = createYoga({
+  schema,
+  // GraphQL Armor protects from common vulnerabilities
+  // See https://github.com/Escape-Technologies/graphql-armor
+  // for more information
+  plugins: [EnvelopArmorPlugin()],
+});
+
+// Start an HTTP server on port 4000
+createServer(yoga).listen(4000, () => {
+  console.info("Server is running on http://localhost:4000/graphql");
+});
+
+// Save the schema to `build/schema.graphql`
+await writeSchema();
+```
+
+### `src/post-build.ts`
+
+This is not necessary to run the application, but it'll come handy to have a simple way to generate the schema file. We'll use it in the next step.
+
+```ts
+import { writeSchema } from "./schema.js";
+
+await writeSchema();
+console.log("✨ Schema exported");
+```
+
+### Update the build script in `package.json`
+
+```json
+{
+  "scripts": {
+    // Update this line to build the API
+    "build": "prisma generate && tsc && yarn node ./build/post-build.js"
+  }
+}
 ```
