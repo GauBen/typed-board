@@ -4,7 +4,7 @@ In this article, we'll create a simple GraphQL application, a message board, by 
 
 ## What is _end-to-end_ type safety?
 
-Type safety is a property of a program that guarantees that all values types are known at build time. It prevents a lot of bugs before running the program. The most common way to achieve type safety in JavaScript is to use TypeScript.
+Type safety is a property of a program that guarantees that all values types are known at build time. It prevents a lot of bugs from happening before running the program. The most common way to achieve type safety in JavaScript is to use TypeScript.
 
 ```ts
 // Declare an object shape:
@@ -20,12 +20,12 @@ sendMail({ name: "John", email: "john@example.com" });
 
 // This doesn't:
 sendMail("john@example.com");
-//       ~~~~~~~~~~~~~~~~~~ (x) Argument of type 'string' is not assignable to parameter of type 'User'.
+// (x) Argument of type 'string' is not assignable to parameter of type 'User'.
 ```
 
-When using TypeScript in a project, you get type safety in this very project. **End-to-end type safety, on the contrary, is achieved when several projects interact in a type-safe way.**
+When using TypeScript in a project, you get type safety in this very project. **End-to-end type safety, on the contrary, is achieved when several projects interact together (e.g. with an API) in a type-safe way.**
 
-In this article, we'll only use type-safe technologies: SQLite for the database, TypeScript for the server and the application, and GraphQL as a way to interact between them.
+In this article, we'll only use type-safe technologies: TypeScript for the server and the application, GraphQL as a way to interact between them, and a SQLite database.
 
 ## Dataflow
 
@@ -142,7 +142,7 @@ To run this code we'll need to complete the TypeScript setup:
 
 Let's use the preset we installed earlier:
 
-```json
+```jsonc
 {
   "extends": "@tsconfig/node18-strictest-esm/tsconfig.json",
   "compilerOptions": {
@@ -156,7 +156,7 @@ Let's use the preset we installed earlier:
 
 The following lines tell Node.js that we write [ECMAScript modules](https://nodejs.org/api/esm.html#introduction) rather than CommonJS modules. In other words, we'll use `import` rather than `require()`.
 
-```json
+```jsonc
 {
   "name": "api",
   "dependencies": {
