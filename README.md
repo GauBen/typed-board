@@ -1,10 +1,10 @@
 # Achieving end-to-end type safety in a modern JS GraphQL stack
 
-In this article, we'll create a simple GraphQL application, a message board, by combining a lot of recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup. **It is however a long read, so I recommend settling in with a cup of coffee, a comfortable chair and a terminal.**
+In this article, we will create a simple GraphQL application, a message board, by combining a lot of recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup. **It is however a long read, so I recommend settling in with a cup of coffee, a comfortable chair and a terminal.**
 
 ## What is _end-to-end_ type safety?
 
-Type safety is a property of a program that guarantees that all values types are known at build time. It prevents a lot of bugs from happening before running the program. The most common way to achieve type safety in JavaScript is to use TypeScript.
+Type safety is a property of a program that guarantees that all values types are known at build time. It prevents a lot of bugs from happening before running the program. The most common way to achieve type safety in a JavaScript project is to use TypeScript:
 
 ```ts
 // Declare an object shape:
@@ -25,13 +25,19 @@ sendMail("john@example.com");
 
 When using TypeScript in a project, you get type safety in this very project. **End-to-end type safety, on the contrary, is achieved when several projects interact together (e.g. with an API) in a type-safe way.**
 
-In this article, we'll only use type-safe technologies: TypeScript for the server and the application, GraphQL as a way to interact between them, and a SQLite database.
+We will build a message board relying only on type-safe technologies: TypeScript for the API and the application, GraphQL as a way to interact between them, and a SQLite database.
 
-## Dataflow
+## Data and type flows
 
-[diagram]
+The data flow of an application is the way data travels and is transformed throughout the application. It is usually represented by a directed graph, like this one:
 
-Database --> Backend --> Frontend
+![Dataflow diagram: Database -> API -> App](./docs/dataflow.drawio.svg)
+
+Since data has a type, **there also exists a type flow, which is the path of types through said application.**
+
+Here, our data flows from left to right, with the database as the source of data. Our types follow the same path, with the database schema as the source of types. This is the reason why I prefer code-first over schema-first GraphQL APIs: the data and type flows overlap.
+
+I annotated the diagram with the technologies we will use in this article, and we will setup these technologies from left to right too.
 
 ## Project setup
 
@@ -55,7 +61,7 @@ echo "nodeLinker: node-modules" >> .yarnrc.yml
 echo "node_modules/\nbuild/" >> .gitignore
 ```
 
-We'll use Yarn 4 because it ships with a few tools to manage monorepos that we'll use later.
+We use Yarn 4 because it ships with a few tools to manage monorepos that we will use later.
 
 ## Prisma
 
@@ -85,7 +91,7 @@ The last command installs the following tools:
 yarn prisma init --datasource-provider sqlite
 ```
 
-This command creates a few files, but the most interesting one is `prisma/schema.prisma`. Prisma offers to describe a database through a schema file. We'll use this file to have Prisma create the tables for us.
+This command creates a few files, but the most interesting one is `prisma/schema.prisma`. Prisma offers to describe a database through a schema file: we will use this file to have Prisma create the tables for us.
 
 ```prisma
 generator client {
@@ -115,9 +121,9 @@ yarn prisma db push
 echo "dev.db" >> .gitignore
 ```
 
-Everything is up and running! Prisma created a database for us in `packages/api/prisma/dev.db`.
+Everything is up and running! Prisma created a SQLite database for us in `packages/api/prisma/dev.db`.
 
-Let's try to interact with it: create a file named `packages/api/src/index.ts` and with the following code:
+Let's try to interact with it; create a file named `packages/api/src/index.ts` with the following code:
 
 ```ts
 import { PrismaClient } from "@prisma/client";
@@ -136,11 +142,11 @@ await prisma.post.create({
 console.log(await prisma.post.findMany());
 ```
 
-To run this code we'll need to complete the TypeScript setup:
+To run this code we will need to complete the project setup:
 
 ### 1. Create a `tsconfig.json` file in `packages/api`
 
-Let's use the preset we installed earlier:
+Let's make use of the preset we installed earlier:
 
 ```jsonc
 {
@@ -154,7 +160,7 @@ Let's use the preset we installed earlier:
 
 ### 2. Update the `package.json`
 
-The following lines tell Node.js that we write [ECMAScript modules](https://nodejs.org/api/esm.html#introduction) rather than CommonJS modules. In other words, we'll use `import` rather than `require()`.
+The following lines tell Node.js that we write [ECMAScript modules](https://nodejs.org/api/esm.html#introduction) rather than CommonJS modules. In other words, we will use `import` rather than `require()`. We also define two package scripts to make our lives easier.
 
 ```jsonc
 {
@@ -179,10 +185,10 @@ The following lines tell Node.js that we write [ECMAScript modules](https://node
 }
 ```
 
-### 3. Fasten your seatbelt, we're ready for takeoff
+### 3. Fasten your seatbelt, _we're ready for takeoff_
 
 ```bash
-# Type-check and build the project
+# Type-check and build the package
 yarn build
 
 # Run the code in watch mode (every time you save a file, it will be re-run)
@@ -191,15 +197,21 @@ yarn dev
 
 You should see your first post printed in the console. **Hello World!**
 
-Thanks to Prisma, all the arguments and return values are typed, allowing **TypeScript to catch typos and provide relevant autocompletion.**
+Thanks to Prisma, all the arguments and return values are typed, allowing **TypeScript to catch typos and provide relevant autocompletion.** You can make sure that TypeScript does is job by removing the title or body of the `post.create` call and then running `yarn build` in the directory; you should see something like this:
 
-We're done for the database part. Let's move on to the backend.
+```console
+src/index.ts:7:3 - error TS2322:
+  ...
+    Property 'title' is missing in type '{ body: string; }' but required in type 'PostCreateInput'.
+```
+
+We're done for the database part, let's move on to the backend.
 
 ## Pothos
 
-[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It's a framework that lets you write code-first GraphQL APIs with an emphasize on _pluginability_ and type safety. **And it has an awesome Prisma integration!** (I'm genuinely excited about this one, it makes my life so much easier.)
+[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It is a library that lets you write code-first GraphQL APIs with an emphasize on _plugability_ and type safety. **And it has an awesome Prisma integration!** (I am genuinely excited about this one, it makes my life so much easier.)
 
-We'll add a GraphQL API on top of our database, with a query to get articles and a mutation to create a new one.
+We will add a GraphQL API on top of our database, with a query to get articles and a mutation to create a new one.
 
 Let's install Pothos and [Yoga](https://www.the-guild.dev/graphql/yoga-server) in the `packages/api` directory:
 
@@ -212,11 +224,11 @@ echo 'generator pothos {\nprovider = "prisma-pothos-types"\n}' >> prisma/schema.
 yarn prisma generate
 ```
 
-Let's create a few files to define a simple GraphQL API:
+And let's also create a few files to define a simple GraphQL API:
 
 ### `src/schema.ts`
 
-This file will contain our queries and mutations. It's a good a good practice to separate the schema file in several files to allow it scale, the [Pothos documentation has dedicated section](https://pothos-graphql.dev/docs/guide/app-layout) about it, but we'll keep it simple for now.
+This file will contain our queries and mutations. It's a good practice to split the schema file in several files to allow it to scale, the [Pothos documentation has dedicated section](https://pothos-graphql.dev/docs/guide/app-layout) about it, but we will keep it simple for now.
 
 ```ts
 import SchemaBuilder from "@pothos/core";
@@ -247,11 +259,12 @@ const PostType = builder.prismaObject("Post", {
 
 builder.queryType({
   fields: (t) => ({
-    // Declare a new query field, `posts`, which returns a list of `Post`s
+    // Declare a new query field, `posts`, which returns the latest posts
     posts: t.prismaField({
-      type: [PostType], // An array of posts
+      // Pothos makes sure that `type` and `resolve` are of the same type
+      type: [PostType],
       resolve: async (query) =>
-        // Return the 10 most recent posts
+        // Return the 10 latest posts
         prisma.post.findMany({ ...query, orderBy: { id: "desc" }, take: 10 }),
     }),
   }),
@@ -259,10 +272,11 @@ builder.queryType({
 
 builder.mutationType({
   fields: (t) => ({
-    // Declare a new mutation field, `createPost`, which creates a new `Post`
+    // Declare a new mutation field, `createPost`, which creates a new post
     createPost: t.prismaField({
       type: PostType,
       // The mutation takes a `title` and `body` arguments
+      // They are correctly typed as string in `resolve`
       args: {
         title: t.arg.string({ required: true }),
         body: t.arg.string({ required: true }),
@@ -274,21 +288,22 @@ builder.mutationType({
   }),
 });
 
-/** Application schema. */
 export const schema = builder.toSchema();
 
 /** Saves the schema to `build/schema.graphql`. */
 export const writeSchema = async () =>
   writeFile(
-    new URL("build/schema.graphql", `file:///${process.cwd()}/`),
+    new URL("build/schema.graphql", `file://${process.cwd()}/`),
     printSchema(schema)
   );
 ```
 
-This is enough to declare a type, a query and a mutation. You can read the resulting schema in `build/schema.graphql`. It should look like this:
+This is enough to declare a type, a query and a mutation.
+
+You will soon be able to read the resulting schema in `build/schema.graphql`; it will look like this:
 
 ```graphql
-# No need to copy this, it is automatically generated!
+# No need to copy this, it will be automatically generated!
 type Post {
   id: ID!
   body: String!
@@ -334,7 +349,7 @@ await writeSchema();
 
 ### `src/post-build.ts`
 
-This is not necessary to run the application, but it'll come handy to have a simple way to generate the schema file. We'll use it in the next step.
+This is not necessary to run the application, but it will come handy to have a simple way to generate the schema file.
 
 ```ts
 import { writeSchema } from "./schema.js";
@@ -381,13 +396,13 @@ Things are working well... Let's make them look good!
 
 ## Svelte
 
-I won't go into the details on _why_ [Svelte](https://svelte.dev/), but I like Svelte a lot. It _feels_ great writing Svelte code. And did I mention that it also offers type safety?
+I won't go into the details of _why_ [Svelte](https://svelte.dev/), but I like Svelte a lot. It _feels_ great writing Svelte code. And did I mention that it also offers type safety?
 
 The easiest way to setup a new Svelte website is with [SvelteKit](https://kit.svelte.dev/); let's go back to the `packages` directory and create a new SvelteKit project:
 
 ```bash
 # Create a Svelte app in the `packages/app` directory
-# You'll have a few choices prompted:
+# You will have a few choices prompted:
 #  - Template: Skeleton project
 #  - Type checking: TypeScript
 #  - Prettier, ESLint, etc.: Not needed, do as you wish
@@ -448,9 +463,11 @@ Run `yarn build` and you should see a new `src/zeus/` directory with a bunch of 
 
 How do we create a message board out of all of this? Keep reading, we're almost there!
 
+TODO: préciser qu'on est toujours dans `packages/app`
+
 ### `src/lib/zeus.ts`
 
-Zeus is a powerful tool but it was not made to be used for server-side rendering. We'll solve this by creating a small wrapper around the generated client:
+Zeus is a powerful tool but it was not made to be used for server-side rendering. We will solve this by creating a small wrapper around the generated client:
 
 ```ts
 import type { LoadEvent } from "@sveltejs/kit";
@@ -483,7 +500,7 @@ export const mutate = async <Mutation extends ValueTypes["Mutation"]>(
 ) => thunder(fetch)("mutation")(mutation);
 ```
 
-It'll make our GraphQL queries much nicer to write.
+It will make our GraphQL queries much nicer to write.
 
 ### `src/routes/+page.ts`
 
@@ -558,7 +575,7 @@ export const load: PageLoad = async ({ fetch }) =>
           title: string;
           body: string;
         }`
-        If you remove `title: true` from `+page.ts`, you'll see an error below
+        If you remove `title: true` from `+page.ts`, you will see an error below
       -->
       <h2>{post.title}</h2>
       <pre>{post.body}</pre>
@@ -609,7 +626,7 @@ export const load: PageLoad = async ({ fetch }) =>
 </style>
 ```
 
-And that's it! When now have a working message board with _end-to-end_ type safety. If you make a type error in this project, it'll be detected at build time. Huh, I missing the most important part...
+And that's it! When now have a working message board with _end-to-end_ type safety. If you make a type error in this project, it will be detected at build time. Huh, I missing the most important part...
 
 ## Wrapping up
 
@@ -639,4 +656,4 @@ yarn build
 yarn dev
 ```
 
-And this concludes this unusually long article. I hope you enjoyed it, and that you'll find it useful. If you have any questions, feel free to ask them in the comments below or where you found this article.
+And this concludes this unusually long article. I hope you enjoyed it, and that you will find it useful. If you have any questions, feel free to ask them in the comments below or where you found this article.
