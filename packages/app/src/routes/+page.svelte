@@ -42,7 +42,7 @@
           title: string;
           body: string;
         }`
-        If you remove `title: true` from `+page.ts`, you'll see an error below
+        If you remove `title: true` from `+page.ts`, you will see an error below
       -->
       <h2>{post.title}</h2>
       <pre>{post.body}</pre>

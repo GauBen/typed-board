@@ -1,10 +1,10 @@
 # Achieving end-to-end type safety in a modern JS GraphQL stack
 
-In this article, we will create a simple GraphQL application, a message board, by combining a lot of recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup. **It is however a long read, so I recommend settling in with a cup of coffee, a comfortable chair and a terminal.**
+In this article, we will create a simple GraphQL application, a message board, by combining many recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup. **It is however a long read, so I recommend settling in with a cup of coffee, a comfortable chair, and a terminal.**
 
 ## What is _end-to-end_ type safety?
 
-Type safety is a property of a program that guarantees that all values types are known at build time. It prevents a lot of bugs from happening before running the program. The most common way to achieve type safety in a JavaScript project is to use TypeScript:
+Type safety is the property of a program that guarantees that all value types are known at build time. It prevents a lot of bugs from happening before running the program. The most common way to achieve type safety in a JavaScript project is to use TypeScript:
 
 ```ts
 // Declare an object shape:
@@ -23,21 +23,21 @@ sendMail("john@example.com");
 // (x) Argument of type 'string' is not assignable to parameter of type 'User'.
 ```
 
-When using TypeScript in a project, you get type safety in this very project. **End-to-end type safety, on the contrary, is achieved when several projects interact together (e.g. with an API) in a type-safe way.**
+When using TypeScript in a project, you get type safety in this very project. **End-to-end type safety, on the contrary, is achieved when several projects interact together (e.g., with an API) in a type-safe way.**
 
 We will build a message board relying only on type-safe technologies: TypeScript for the API and the application, GraphQL as a way to interact between them, and a SQLite database.
 
 ## Data and type flows
 
-The data flow of an application is the way data travels and is transformed throughout the application. It is usually represented by a directed graph, like this one:
+The data flow of an application is the way data travels and is transformed throughout the application. It is usually represented by a directed graph like this one:
 
 ![Dataflow diagram: Database -> API -> App](./docs/dataflow.drawio.svg)
 
 Since data has a type, **there also exists a type flow, which is the path of types through said application.**
 
-Here, our data flows from left to right, with the database as the source of data. Our types follow the same path, with the database schema as the source of types. This is the reason why I prefer code-first over schema-first GraphQL APIs: the data and type flows overlap.
+Here, our data flows from left to right, with the database as the data source. Our types follow the same path, with the database schema as the source of types. This is why I prefer code-first over schema-first GraphQL APIs: the data and type flows overlap.
 
-I annotated the diagram with the technologies we will use in this article, and we will setup these technologies from left to right too.
+I annotated the diagram with the technologies we will use in this article, and we will set up these technologies from left to right too.
 
 ## Project setup
 
@@ -54,14 +54,17 @@ volta install yarn@latest
 mkdir typed-board && cd $_
 
 # Setup a monorepo with Yarn 4
-yarn init --private --workspace --install=4.0.0-rc.22
+yarn init --private --workspace -2
+yarn set version canary
 
 # Enable the good ol' node_modules
-echo "nodeLinker: node-modules" >> .yarnrc.yml
-echo "node_modules/\nbuild/" >> .gitignore
+echo 'nodeLinker: node-modules' >> .yarnrc.yml
+echo 'node_modules/\nbuild/' >> .gitignore
 ```
 
 We use Yarn 4 because it ships with a few tools to manage monorepos that we will use later.
+
+[_Read more about monorepo tooling_](https://escape.tech/blog/p/4828adcc-f3b2-4c33-8882-411a35902fdb/)
 
 ## Prisma
 
@@ -93,6 +96,8 @@ yarn prisma init --datasource-provider sqlite
 
 This command creates a few files, but the most interesting one is `prisma/schema.prisma`. Prisma offers to describe a database through a schema file: we will use this file to have Prisma create the tables for us.
 
+<!-- TODO: change to js for dev.to -->
+
 ```prisma
 generator client {
   provider = "prisma-client-js"
@@ -103,7 +108,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Let's declare a Post table, with 3 columns
+// Let's declare a Post table
 model Post {
   id    Int    @id @default(autoincrement())
   title String
@@ -111,14 +116,14 @@ model Post {
 }
 ```
 
-This `model` declares that we want a `Post` table with 3 columns. Our database doesn't exist yet, so let's create it:
+This `model` declares that we want a `Post` table with three columns. Our database doesn't exist yet, so let's create it:
 
 ```bash
-# Ask prisma to "push" our changes to the database
+# Make prisma create a database conforming to the schema
 yarn prisma db push
 
 # Ignore the SQLite database
-echo "dev.db" >> .gitignore
+echo 'dev.db' >> .gitignore
 ```
 
 Everything is up and running! Prisma created a SQLite database for us in `packages/api/prisma/dev.db`.
@@ -142,7 +147,7 @@ await prisma.post.create({
 console.log(await prisma.post.findMany());
 ```
 
-To run this code we will need to complete the project setup:
+To run this code, we will need to complete the project setup:
 
 ### 1. Create a `tsconfig.json` file in `packages/api`
 
@@ -185,7 +190,7 @@ The following lines tell Node.js that we write [ECMAScript modules](https://node
 }
 ```
 
-### 3. Fasten your seatbelt, _we're ready for takeoff_
+### 3. Fasten your seatbelt – _we're ready for takeoff_
 
 ```bash
 # Type-check and build the package
@@ -197,7 +202,7 @@ yarn dev
 
 You should see your first post printed in the console. **Hello World!**
 
-Thanks to Prisma, all the arguments and return values are typed, allowing **TypeScript to catch typos and provide relevant autocompletion.** You can make sure that TypeScript does is job by removing the title or body of the `post.create` call and then running `yarn build` in the directory; you should see something like this:
+Prisma types all the arguments and return values, allowing **TypeScript to catch typos and provide relevant autocompletion.** You can ensure that TypeScript does its job by removing the title or body of the `post.create` call and then run `yarn build` in the directory; you should see something like this:
 
 ```console
 src/index.ts:7:3 - error TS2322:
@@ -205,11 +210,11 @@ src/index.ts:7:3 - error TS2322:
     Property 'title' is missing in type '{ body: string; }' but required in type 'PostCreateInput'.
 ```
 
-We're done for the database part, let's move on to the backend.
+We're done with the database part; let's move on to the backend.
 
 ## Pothos
 
-[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It is a library that lets you write code-first GraphQL APIs with an emphasize on _plugability_ and type safety. **And it has an awesome Prisma integration!** (I am genuinely excited about this one, it makes my life so much easier.)
+[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It is a library that lets you write code-first GraphQL APIs with an emphasize on _pluggability_ and type safety. **And it has an awesome Prisma integration!** (I am genuinely excited about this one, it makes my life so much easier.)
 
 We will add a GraphQL API on top of our database, with a query to get articles and a mutation to create a new one.
 
@@ -228,7 +233,7 @@ And let's also create a few files to define a simple GraphQL API:
 
 ### `src/schema.ts`
 
-This file will contain our queries and mutations. It's a good practice to split the schema file in several files to allow it to scale, the [Pothos documentation has dedicated section](https://pothos-graphql.dev/docs/guide/app-layout) about it, but we will keep it simple for now.
+This file will contain our queries and mutations. It's a good practice to split the schema file into several files to allow it to scale, the [Pothos documentation has a dedicated section](https://pothos-graphql.dev/docs/guide/app-layout) about it, but we will keep it simple for now.
 
 ```ts
 import SchemaBuilder from "@pothos/core";
@@ -298,7 +303,7 @@ export const writeSchema = async () =>
   );
 ```
 
-This is enough to declare a type, a query and a mutation.
+This is enough to declare a type, a query, and a mutation.
 
 You will soon be able to read the resulting schema in `build/schema.graphql`; it will look like this:
 
@@ -349,7 +354,7 @@ await writeSchema();
 
 ### `src/post-build.ts`
 
-This is not necessary to run the application, but it will come handy to have a simple way to generate the schema file.
+This file is not necessary to run the application, but it will come in handy to have a simple way to generate the schema file.
 
 ```ts
 import { writeSchema } from "./schema.js";
@@ -370,7 +375,7 @@ console.log("✨ Schema exported");
 }
 ```
 
-And we're all settled! You can run `yarn dev` if it's not already running an go to [localhost:4000/graphql](http://localhost:4000/graphql) to play with the GraphQL API. _Behold the magnificent GraphiQL interface!_ It looks really nice compared to its previous version, doesn't it?
+And we're all settled! You can run `yarn dev` if it's not already running and go to [localhost:4000/graphql](http://localhost:4000/graphql) to play with the GraphQL API. _Behold the magnificent GraphiQL interface!_ It looks really nice compared to its previous version, doesn't it?
 
 You can try fetching and inserting data with the following queries:
 
@@ -392,13 +397,15 @@ mutation {
 }
 ```
 
+![A screenshot of GraphiQL, a GraphQL IDE](./docs/graphiql.png)
+
 Things are working well... Let's make them look good!
 
 ## Svelte
 
 I won't go into the details of _why_ [Svelte](https://svelte.dev/), but I like Svelte a lot. It _feels_ great writing Svelte code. And did I mention that it also offers type safety?
 
-The easiest way to setup a new Svelte website is with [SvelteKit](https://kit.svelte.dev/); let's go back to the `packages` directory and create a new SvelteKit project:
+The easiest way to set up a new Svelte website is with [SvelteKit](https://kit.svelte.dev/); let's go back to the `packages` directory and create a new SvelteKit project:
 
 ```bash
 # Create a Svelte app in the `packages/app` directory
@@ -430,7 +437,7 @@ You can run `svelte dev` to see the _hello world_, but we need a missing piece b
 
 ## GraphQL Zeus
 
-You can think of [GraphQL Zeus](https://zeus.graphqleditor.com/) as Prisma for the frontend: it writes GraphQL queries out of JavaScript objects, and produces the proper return types.
+You can think of [GraphQL Zeus](https://zeus.graphqleditor.com/) as Prisma for the frontend: it writes GraphQL queries out of JavaScript objects and produces the proper return types.
 
 In the `packages/app` directory, add the following dependencies:
 
@@ -442,7 +449,7 @@ yarn add --dev graphql-zeus
 yarn add --dev api@workspace
 
 # Gitignore the generated files
-echo "src/zeus/" >> .gitignore
+echo 'src/zeus/' >> .gitignore
 ```
 
 Let's update `packages/app/package.json`:
@@ -457,17 +464,17 @@ Let's update `packages/app/package.json`:
 }
 ```
 
-Run `yarn build` and you should see a new `src/zeus/` directory with a bunch of files. Let's put all the pieces together!
+Run `yarn build`, and you should see a new `src/zeus/` directory with a bunch of files. Let's put all the pieces together!
 
 ## Typed Board
 
-How do we create a message board out of all of this? Keep reading, we're almost there!
+How do we create a message board out of all of this? Keep reading – we're almost there!
 
-TODO: préciser qu'on est toujours dans `packages/app`
+We have a few things to add to `packages/app` for everything to work:
 
 ### `src/lib/zeus.ts`
 
-Zeus is a powerful tool but it was not made to be used for server-side rendering. We will solve this by creating a small wrapper around the generated client:
+Zeus is a powerful tool, but it was not made to be used for server-side rendering. We will solve this by creating a small wrapper around the generated client:
 
 ```ts
 import type { LoadEvent } from "@sveltejs/kit";
@@ -504,7 +511,7 @@ It will make our GraphQL queries much nicer to write.
 
 ### `src/routes/+page.ts`
 
-This file is used to provide the data to the `+page.svelte` component, both on the client (when using browser navigation) and the server (when using server-side rendering).
+This file provides the data to the `+page.svelte` component, both on the client (on browser navigation) and on the server (when using server-side rendering).
 
 ```ts
 import { query } from "$lib/zeus";
@@ -530,14 +537,18 @@ export const load: PageLoad = async ({ fetch }) =>
 
 ### `src/routes/+page.svelte`
 
+<!-- TODO: change to html for dev.to -->
+
 ```svelte
 <script lang="ts">
   import { invalidateAll } from "$app/navigation";
   import { mutate } from "$lib/zeus";
+
+  // SvelteKit magic: forward `load` function return type 🪄
   import type { PageData } from "./$types";
 
   // `export` means that `data` is a prop
-  export let data: PageData; // PageData is provided by SvelteKit
+  export let data: PageData;
 
   // Variables bound to the form inputs
   let title = "";
@@ -626,11 +637,13 @@ export const load: PageLoad = async ({ fetch }) =>
 </style>
 ```
 
-And that's it! When now have a working message board with _end-to-end_ type safety. If you make a type error in this project, it will be detected at build time. Huh, I missing the most important part...
+And that's it! We now have a working message board with _end-to-end_ type safety. If you make a type error in this project, the compiler will catch it at build time. Huh, I am missing the most critical part...
+
+![A screenshot of the finished message board](./docs/app.png)
 
 ## Wrapping up
 
-It's time to setup the whole _check my types_ build scripts. Thanks to Yarn 4, that's a matter of only one command. Add the following script in the root `package.json`:
+It's time to set up the whole _check my types_ build scripts. Thanks to Yarn 4, that's a matter of only one command. Add the following scripts in the root `package.json`:
 
 ```jsonc
 {
@@ -638,7 +651,7 @@ It's time to setup the whole _check my types_ build scripts. Thanks to Yarn 4, t
   "packageManager": "yarn@4.0.0-rc.22",
   "private": true,
   "workspaces": ["packages/*"],
-  // Add this script to build the two packages in the right order:
+  // Add these scripts to build the two packages in the right order:
   "scripts": {
     "build": "yarn workspaces foreach --topological-dev -pv run build",
     "dev": "yarn workspaces foreach -piv run dev"
@@ -646,14 +659,14 @@ It's time to setup the whole _check my types_ build scripts. Thanks to Yarn 4, t
 }
 ```
 
-This build command triggers all the packages' `build` commands in the right (topological) order, and all of them are set up to catch type errors. I also added a `dev` command that starts all the dev servers in parallel, for convenience.
+This build command triggers all the packages' `build` commands in the correct (topological) order, and they are all set up to catch type errors. I also added a `dev` command that starts all the dev servers in parallel, for convenience.
 
 ```bash
-# Launch the whole build pipeline and check the code 🪄
+# Launch the whole build pipeline and check the code 👀
 yarn build
 
 # Launch all the dev servers at once
 yarn dev
 ```
 
-And this concludes this unusually long article. I hope you enjoyed it, and that you will find it useful. If you have any questions, feel free to ask them in the comments below or where you found this article.
+And this concludes this unusually long article. I hope you enjoyed it and that you will find it helpful. If you have any questions, feel free to ask them in the comments below or where you found this article.
