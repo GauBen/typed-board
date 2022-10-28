@@ -64,8 +64,6 @@ echo 'node_modules/\nbuild/' >> .gitignore
 
 We use Yarn 4 because it ships with a few tools to manage monorepos that we will use later.
 
-[_Read more about monorepo tooling_](https://escape.tech/blog/p/4828adcc-f3b2-4c33-8882-411a35902fdb/)
-
 ## Prisma
 
 [Prisma](https://www.prisma.io/) is an ORM for Node.js and TypeScript, focused on developer experience. Among all of its features, Prisma offers a top-notch type-safe database client.
@@ -221,8 +219,8 @@ We will add a GraphQL API on top of our database, with a query to get articles a
 Let's install Pothos and [Yoga](https://www.the-guild.dev/graphql/yoga-server) in the `packages/api` directory:
 
 ```bash
-# Install Pothos, Yoga and GraphQL Armor
-yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga@three @escape.tech/graphql-armor
+# Install Pothos and Yoga
+yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga@three
 
 # Setup the Prisma-Pothos integration
 echo 'generator pothos {\nprovider = "prisma-pothos-types"\n}' >> prisma/schema.prisma
@@ -329,19 +327,12 @@ type Mutation {
 This file will be the entry point of our application. It creates the GraphQL server and starts it.
 
 ```ts
-import { EnvelopArmorPlugin } from "@escape.tech/graphql-armor";
 import { createYoga } from "graphql-yoga";
 import { createServer } from "node:http";
 import { schema, writeSchema } from "./schema.js";
 
 // Create a Yoga instance with the schema
-const yoga = createYoga({
-  schema,
-  // GraphQL Armor protects from common vulnerabilities
-  // See https://github.com/Escape-Technologies/graphql-armor
-  // for more information
-  plugins: [EnvelopArmorPlugin()],
-});
+const yoga = createYoga({ schema });
 
 // Start an HTTP server on port 4000
 createServer(yoga).listen(4000, () => {
