@@ -212,7 +212,7 @@ We're done with the database part; let's move on to the backend.
 
 ## Pothos
 
-[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It is a library that lets you write code-first GraphQL APIs with an emphasis on \_pluggability\_\_ and type safety. **And it has an awesome Prisma integration!** (I am genuinely excited about this one, it makes my life so much easier.)
+[Pothos](https://pothos-graphql.dev/) is a breeze of fresh air when it comes to building GraphQL APIs. It is a library that lets you write code-first GraphQL APIs with an emphasis on _pluggability_ and type safety. **And it has an awesome Prisma integration!** (I am genuinely excited about this one, it makes my life so much easier.)
 
 We will add a GraphQL API on top of our database, with a query to get articles and a mutation to create a new one.
 
