@@ -1,3 +1,5 @@
+![Article cover](./docs/cover.png)
+
 # Achieving end-to-end type safety in a modern JS GraphQL stack
 
 In this article, we will create a simple GraphQL application, a message board, by combining many recent open-source technologies. This article aims to be a showcase of technologies that work well together rather than a complete tutorial on project setup. **It is however a long read, so I recommend settling in with a cup of coffee, a comfortable chair, and a terminal.**
