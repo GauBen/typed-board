@@ -171,15 +171,14 @@ The following lines tell Node.js that we write [ECMAScript modules](https://node
 {
   "name": "api",
   "dependencies": {
-    "@prisma/client": "^4.4.0"
+    "@prisma/client": "^4.6.1"
   },
   "devDependencies": {
     "@tsconfig/node18-strictest-esm": "^1.0.1",
-    "prisma": "^4.4.0",
-    "tsx": "^3.9.0",
-    "typescript": "^4.8.4"
+    "prisma": "^4.6.1",
+    "tsx": "^3.12.1",
+    "typescript": "^4.9.3"
   },
-  "packageManager": "yarn@4.0.0-rc.22",
   "private": true,
   // Add the following lines: (without this comment)
   "scripts": {
@@ -222,7 +221,7 @@ Let's install Pothos and [Yoga](https://www.the-guild.dev/graphql/yoga-server) i
 
 ```bash
 # Install Pothos and Yoga
-yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga@three
+yarn add @pothos/core @pothos/plugin-prisma graphql graphql-yoga
 
 # Setup the Prisma-Pothos integration
 echo 'generator pothos {\nprovider = "prisma-pothos-types"\n}' >> prisma/schema.prisma
@@ -641,7 +640,6 @@ It's time to set up the whole _check my types_ build scripts. Thanks to Yarn 4, 
 ```jsonc
 {
   "name": "typed-board",
-  "packageManager": "yarn@4.0.0-rc.22",
   "private": true,
   "workspaces": ["packages/*"],
   // Add these scripts to build the two packages in the right order:

@@ -1,19 +1,18 @@
 {
   "name": "api",
   "dependencies": {
-    "@escape.tech/graphql-armor": "^1.3.0",
-    "@pothos/core": "^3.22.4",
-    "@pothos/plugin-prisma": "^3.35.3",
-    "@prisma/client": "^4.4.0",
+    "@pothos/core": "^3.23.0",
+    "@pothos/plugin-prisma": "^3.36.0",
+    "@prisma/client": "^4.6.1",
     "graphql": "^16.6.0",
-    "graphql-yoga": "^3.0.0-next.3"
+    "graphql-yoga": "^3.0.3"
   },
   "devDependencies": {
     "@tsconfig/node18-strictest-esm": "^1.0.1",
-    "@types/node": "^18.7.23",
-    "prisma": "^4.4.0",
-    "tsx": "^3.9.0",
-    "typescript": "^4.8.4"
+    "@types/node": "^18.11.9",
+    "prisma": "^4.6.1",
+    "tsx": "^3.12.1",
+    "typescript": "^4.9.3"
   },
   "packageManager": "yarn@4.0.0-rc.22",
   "private": true,
